@@ -1,0 +1,163 @@
+Notes for implementing the Tessellated Intelligence System Node T21 with 11 bit data (-1024 to +1023 as opposed to -999 to +999)
+file:///C:/Program%20Files%20(x86)/Steam/steamapps/common/TIS-100/TIS-100%20Reference%20Manual.pdf
+
+Each node has:
+	- 15 instructions
+	- ACC
+	- BAK
+	- IO on all 4 sides
+
+Instruction Set
+	- NOP
+	- MOV <SRC> <DST>
+	- SWP
+	- SAV
+	- ADD <SRC>
+	- SUB <SRC>
+	- NEG
+	- JMP <DST>
+	- JEZ <DST>
+	- JNZ <DST>
+	- JGZ <DST>
+	- JLZ <DST>
+	- JRO <SRC>
+	- HCF
+
+Source/Destination format
+	- ACC
+	- BAK
+	- NIL
+		- Equivalent to immediate 0 as source
+		- Discard as destination
+	- LEFT, RIGHT, UP, DOWN
+		- 0, 1, 2, 3 respectively
+	- ANY
+		- Wait for IO request from adjacent nodes
+	- LAST
+		- Previous node communicated with
+
+Invalid instructions are equivalent to a HCF and should halt the network
+
+Instruction Binary
+	[opcode 4b] [source 12b] [destination 12b] (28 bits total)
+	
+	Opcodes:
+		|------|-----|
+		| 0000 | NOP |
+		|------|-----|
+		| 0001 | MOV |
+		|------|-----|
+		| 0010 | SWP |
+		|------|-----|
+		| 0011 | SAV |
+		|------|-----|
+		| 0100 | ADD |
+		|------|-----|
+		| 0101 | SUB |
+		|------|-----|
+		| 0110 | NEG |
+		|------|-----|
+		| 1000 | JMP |
+		|------|-----|
+		| 1001 | JEZ |
+		|------|-----|
+		| 1010 | JNZ |
+		|------|-----|
+		| 1011 | JGZ |
+		|------|-----|
+		| 1100 | JLZ |
+		|------|-----|
+		| 1101 | JRO |
+		|------|-----|
+		| 1111 | HCF |
+		|------|-----|
+	
+	Source/Destination:
+		|---|---|---|---|---|---|---|---|---|---|---|---|-----------------|
+		| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | Value           |
+		|---|---|---|---|---|---|---|---|---|---|---|---|-----------------|
+		| 0 |                               aaaaaaaaaaa | Immediate Value |
+		|---|---|-----------------------------------|---|-----------------|
+		| 1 | 0 |                         xxxxxxxxx | r | Register        |
+		|   |---|---------------------------|-------|---|-----------------|
+		|   | 1 |                   xxxxxxx |       ppp | Port            |
+		|---|---|---------------------------|-----------|-----------------|
+	
+	Registers:
+		|---|-----|
+		| 0 | NIL |
+		|---|-----|
+		| 1 | ACC |
+		|---|-----|
+	
+	Ports:
+		|-----|-------|
+		| 000 | LEFT  |
+		|-----|-------|
+		| 001 | RIGHT |
+		|-----|-------|
+		| 010 | UP    |
+		|-----|-------|
+		| 011 | DOWN  |
+		|-----|-------|
+		| 100 | ANY   |
+		|-----|-------|
+		| 101 | LAST  |
+		|-----|-------|
+
+
+FILE FORMATS
+There are two file formats to be used: the game's save file format, and the node-map format.
+
+The game's format consists of a series of @<node id> which correspond to available nodes from left
+to right, top to bottom. Numbering is from 0 to 11, but continuous such that an unavailable node is
+ignored, rather than numbering jumping.
+
+The node-map format consists of a set of header tags as seen below, which identify the type of node
+represented and its position in a coordinate grid with the origin at the top left.
+
+<<NODE T-21 (0,0)>> (execution node, code comes below
+<<NODE T-30 (0,1)>> (stack memory node)
+
+
+Example Program (Takes inputs from (0, -1) and (2, -1) and adds them, outputting to (1, 1)
+Game File Format:
+@0
+MOV UP RIGHT
+
+@1
+MOV LEFT ACC
+ADD RIGHT
+MOV ACC DOWN
+
+@2
+MOV UP LEFT
+
+Node-Map Format:
+<<NODE T-21 (0,0)>>
+MOV UP RIGHT
+
+<<NODE T-21 (1,0)>>
+MOV LEFT ACC
+ADD RIGHT
+MOV ACC DOWN
+
+<<NODE T-21 (2,0)>>
+MOV UP LEFT
+
+Assembled Binary (for either):
+0,0,NODE T-21 
+0: 0001110000000010110000000001
+
+1,0,NODE T-21 
+0: 0001110000000000100000000001
+1: 0100110000000001000000000000
+2: 0001100000000001110000000011
+
+2,0,NODE T-21 
+0: 0001110000000010110000000000
+
+
+
+
+

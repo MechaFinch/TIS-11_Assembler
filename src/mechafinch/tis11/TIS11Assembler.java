@@ -1,7 +1,9 @@
 package mechafinch.tis11;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,39 +17,55 @@ public class TIS11Assembler {
 	
 	/*
 	 * Usage
-	 * TIS11Assembler [outputfile] inputfile
+	 * TIS11Assembler [-v] inputfile [outputfile]
 	 * 	outputfile: The file to output to
 	 * 	inputfile: The file to take input from
+	 *  -v: Verbose output
 	 */
 	public static void main(String[] args) {
+		boolean verbose = false;
 		
-		// Sanitize arguments
-		switch(args.length) {
-			case 1:
-				args = new String[] {args[0].substring(0, args[0].indexOf('.')) + "_bin.txt", args[0]};
+		// Sanitize arguments, enabling verbose output if necessary and constructing the output destination if necessary
+		if(args.length > 0) {
+			if(args[0].toLowerCase().equals("-v")) {
+				if(args.length < 2) {
+					printUsage("Missing arguments");
+					return;
+				} else if(args.length > 3) {
+					printUsage("Too many arguments");
+					return;
+				}
 				
-			case 2:
-				break;
+				if(args.length == 3) {
+					args = new String[] {args[1], args[2]};
+				} else {
+					args = new String[] {args[1]};
+				}
+				
+				verbose = true;
+			}
 			
-			case 0:
-				printUsage("Missing arguments");
-				return;
-				
-			default:
+			if(args.length > 2) {
 				printUsage("Too many arguments");
 				return;
+			} else if(args.length == 1) {
+				args = new String[] {args[0], args[0].substring(0, args[0].indexOf('.')) + "_bin.txt"};
+			}
+		} else {
+			printUsage("Missing arguments");
+			return;
 		}
 		
-		String inputFilePath = args[1],
-			   outputFilePath = args[0];
+		String inputFilePath = args[0],
+			   outputFilePath = args[1];
 		
 		// Echo arguments
-		System.out.println("Input File: " + inputFilePath + "\nOutput File: " + outputFilePath + "\n");
-		String[] inputLines;
+		if(verbose) System.out.println("Input File: " + inputFilePath + "\nOutput File: " + outputFilePath + "\n");
 		
 		// Read the file
+		String[] inputLines;
 		try {
-			inputLines = readInputFile(args[1]);
+			inputLines = readInputFile(inputFilePath);
 		} catch(IOException e) {
 			System.err.println(e.getMessage());
 			return;
@@ -82,14 +100,15 @@ public class TIS11Assembler {
 		}
 		
 		// Print node list
-		nodes.forEach(n -> n.forEach(System.out::println));
+		if(verbose) nodes.forEach(n -> n.forEach(System.out::println));
 		
-		// Assemble into binary
+		// Object holding the output
 		ArrayList<ArrayList<String>> binaries = new ArrayList<>();
 		
-		//Some common binary strings
+		// Some common binary strings
 		String immZero = "000000000000";
 		
+		// Assemble into binary
 		for(ArrayList<String> node : nodes) {
 			ArrayList<String> bin = new ArrayList<>();
 			bin.add(node.get(0)); // Header line
@@ -248,10 +267,37 @@ public class TIS11Assembler {
 			binaries.add(bin);
 		}
 		
-		System.out.println("\n");
-		binaries.forEach(n -> n.forEach(System.out::println));
+		if(verbose) {
+			System.out.println("\n");
+			binaries.forEach(n -> n.forEach(System.out::println));
+		}
 		
-		System.out.println();
+		// Write the output to a file
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(outputFilePath));
+			
+			// Loop over assembled nodes
+			for(ArrayList<String> node : binaries) {
+				bw.write(node.get(0)); // Output node title
+				bw.newLine();
+				
+				// Output each line of binary, with its number
+				for(int i = 1; i < node.size(); i++) {
+					bw.write((i - 1) + ": " + node.get(i));
+					bw.newLine();
+				}
+				
+				bw.newLine(); // Empty line between nodes
+			}
+			
+			bw.close();
+		} catch(IOException e) {
+			System.err.println(e.getMessage());
+			return;
+		}
+		
+		System.out.println("\nAssembly complete. Output written to " + outputFilePath + "\n");
+
 	}
 	
 	/**
@@ -479,9 +525,10 @@ public class TIS11Assembler {
 	private static void printUsage(String error) {
 		System.err.println("\n" + error);
 		System.err.println("Usage:\n" +
-						   "TIS11Assembler [-o output] input\n" +
+						   "TIS11Assembler [-v] input [output]\n" +
+						   "\tinput:  The file to take input from\n" +
 						   "\toutput: The file to output to\n" +
-						   "\tinput:  The file to take input from\n");
+						   "\t-v:     Enable verbose console output\n");
 	}
 	
 	/**
