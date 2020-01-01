@@ -103,7 +103,7 @@ public class TIS11Assembler {
 					String l = s.substring(0, s.indexOf(':'));
 					
 					if(labelMap.containsKey(l)) {
-						System.err.println(String.format("Error at %s, line %d: Duplicate label '%s'", nodeCoords, i - 1, l));
+						printError("Duplicate label '%s'", nodeCoords, i - 1, l);
 						return;
 					}
 					
@@ -128,41 +128,119 @@ public class TIS11Assembler {
 				node.set(i, s);
 			}
 			
+			// Make sure we fit within the 15 instructions, now that we're only instructions
+			if(node.size() > 15) {
+				System.err.println(String.format("Error at %s: Too many instructions", nodeCoords));
+				return;
+			}
+			
 			// We have pure opcodes now. Next we pass over and parse things
 			for(int i = 1; i < node.size(); i++) {
-				String instruction = node.get(i);
+				String[] instruction = node.get(i).split(" ");
+				if(instruction.length == 0) { // This should have been cleaned but we'll check anyways
+					printError("Empty instruction", nodeCoords, i - 1);
+					return;
+				}
 				
 				// Determine opcode, convert to binary in each
-				if(instruction.startsWith("NOP")) {
-					bin.add("0000" + immZero + immZero);
-				} else if(instruction.startsWith("MOV")) {
-					// TODO
-				} else if(instruction.startsWith("SWP")) {
-					bin.add("0010" + immZero + immZero);
-				} else if(instruction.startsWith("SAV")) {
-					bin.add("0011" + immZero + immZero);
-				} else if(instruction.startsWith("ADD")) {
-					// TODO
-				} else if(instruction.startsWith("SUB")) {
-					// TODO
-				} else if(instruction.startsWith("NEG")) {
-					bin.add("0110" + immZero + immZero);
-				} else if(instruction.startsWith("JMP")) {
-					// TODO
-				} else if(instruction.startsWith("JEZ")) {
-					// TODO
-				} else if(instruction.startsWith("JNZ")) {
-					// TODO
-				} else if(instruction.startsWith("JGZ")) {
-					// TODO
-				} else if(instruction.startsWith("JLZ")) {
-					// TODO
-				} else if(instruction.startsWith("JRO")) {
-					// TODO
-				} else if(instruction.startsWith("HCF")) {
-					bin.add("1111" + immZero + immZero);
-				} else { // Invalid opcode
-					System.err.println(String.format("Error at %s, line %d: Invalid opcode '%s'", nodeCoords, i - 1, instruction));
+				try { // Catch errors from parsing methods
+					if(instruction[0].equals("NOP")) {				// NOP
+						bin.add("0000" + immZero + immZero);
+					} else if(instruction[0].equals("MOV")) {		// MOV
+						// Verify we have source and destination
+						if(instruction.length != 3) {
+							if(instruction.length < 3) printError("Missing arguments", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("0001" + parseSource(instruction[1], nodeCoords, i - 1) + parseDestination(instruction[2], nodeCoords, i - 1));
+					} else if(instruction[0].equals("SWP")) {		// SWP
+						bin.add("0010" + immZero + immZero);
+					} else if(instruction[0].equals("SAV")) {		// SAV
+						bin.add("0011" + immZero + immZero);
+					} else if(instruction[0].equals("ADD")) {		// ADD
+						// Verify arguments
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing arguments", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("0100" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+					} else if(instruction[0].equals("SUB")) {		// SUB
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing arguments", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("0101" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+					} else if(instruction[0].equals("NEG")) {		// NEG
+						bin.add("0110" + immZero + immZero);
+					} else if(instruction[0].equals("JMP")) {		// JMP
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing argmuents", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1000" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+					} else if(instruction[0].equals("JEZ")) {		// JEZ
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing argmuents", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1001" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+					} else if(instruction[0].equals("JNZ")) {		// JNZ
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing argmuents", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1010" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+					} else if(instruction[0].equals("JGZ")) {		// JGZ
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing argmuents", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1011" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+					} else if(instruction[0].equals("JLZ")) {		// JLZ
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing argmuents", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1100" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+					} else if(instruction[0].equals("JRO")) {		// JRO
+						// Verify args
+						if(instruction.length != 2) {
+							if(instruction.length < 2) printError("Missing arguments", nodeCoords, i - 1);
+							else printError("Too many arguments", nodeCoords, i - 1);
+							return;
+						}
+						
+						bin.add("1101" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+					} else if(instruction[0].equals("HCF")) {		// HCF
+						bin.add("1111" + immZero + immZero);
+					} else { // Invalid opcode
+						printError("Invalid opcode '%s'", nodeCoords, i - 1, instruction);
+						return;
+					}
+				} catch(ParseException e) {
+					System.err.println(e.getMessage());
 					return;
 				}
 			}
@@ -174,6 +252,134 @@ public class TIS11Assembler {
 		binaries.forEach(n -> n.forEach(System.out::println));
 		
 		System.out.println();
+	}
+	
+	/**
+	 * Parses a label into a binary string
+	 * 
+	 * @param lbl The label
+	 * @param lblMap The hashmap of labels and their values
+	 * @param coords The coordinates of the node
+	 * @param line The line of code
+	 * @return A binary string
+	 * @throws ParseException
+	 */
+	private static String parseLabel(String lbl, HashMap<String, Integer> lblMap, String coords, int line) throws ParseException {
+		if(!lblMap.containsKey(lbl)) {
+			throw new ParseException("Label not found '%s'", coords, line, lbl);
+		}
+		
+		String binString = Integer.toBinaryString(lblMap.get(lbl));		
+		return "0" + String.format("%11s", binString).replace(' ', '0');
+	}
+	
+	/**
+	 * Parses a destination into a binary string
+	 * 
+	 * @param dst The destination
+	 * @param coords The coordinates of the node
+	 * @param line The line of code
+	 * @return A binary string
+	 * @throws ParseException
+	 */
+	private static String parseDestination(String dst, String coords, int line) throws ParseException {
+		switch(dst) { // Registers and ports
+			case "NIL":
+				return "100000000000";
+			
+			case "ACC":
+				return "100000000001";
+			
+			case "LEFT":
+				return "110000000000";
+			
+			case "RIGHT":
+				return "110000000001";
+				
+			case "UP":
+				return "110000000010";
+				
+			case "DOWN":
+				return "110000000011";
+				
+			case "ANY":
+				return "110000000100";
+				
+			case "LAST":
+				return "110000000101";
+		}
+		
+		// Cannot be anything else
+		throw new ParseException("Invalid destination", coords, line);
+	}
+	
+	/**
+	 * Parses a source into a binary string
+	 * 
+	 * @param src The source
+	 * @param coords The coordinates of the node
+	 * @param line The line of code
+	 * @return A binary string
+	 * @throws ParseException
+	 */
+	private static String parseSource(String src, String coords, int line) throws ParseException {
+		switch(src) { // Registers and ports
+			case "NIL":
+				return "100000000000";
+			
+			case "ACC":
+				return "100000000001";
+			
+			case "LEFT":
+				return "110000000000";
+			
+			case "RIGHT":
+				return "110000000001";
+				
+			case "UP":
+				return "110000000010";
+				
+			case "DOWN":
+				return "110000000011";
+				
+			case "ANY":
+				return "110000000100";
+				
+			case "LAST":
+				return "110000000101";
+		}
+		
+		// Must be immediate value
+		try {
+			int imm = Integer.parseInt(src);
+			
+			if(imm < -1024 || imm > 1023) throw new ParseException("Invalid source (immediate out of range)", coords, line);
+			
+			String binaryString = String.format("%11s", Integer.toBinaryString(imm)).replace(' ', '0');
+			if(binaryString.length() > 11) binaryString = binaryString.substring(binaryString.length() - 11);
+			
+			return "0" + binaryString;
+		} catch(NumberFormatException e) {
+			throw new ParseException("Invalid source (not a number or register)", coords, line);
+		}
+	}
+	
+	/**
+	 * Prints a parsing error
+	 * 
+	 * @param msg The error message
+	 * @param coords The coordinates of the node
+	 * @param line The line of code that caused the error
+	 * @param others Other information
+	 */
+	private static void printError(String msg, String coords, int line, String ... others) {
+		Object[] args = new Object[others.length + 2];
+		args[0] = coords;
+		args[1] = line;
+		
+		for(int i = 0; i < others.length; i++) args[i + 2] = others[i];
+		
+		System.err.println(String.format("Error at %s, line %d: " + msg, args));
 	}
 	
 	/**
@@ -276,5 +482,19 @@ public class TIS11Assembler {
 						   "TIS11Assembler [-o output] input\n" +
 						   "\toutput: The file to output to\n" +
 						   "\tinput:  The file to take input from\n");
+	}
+	
+	/**
+	 * An exception denoting an error occured while parsing outside of main
+	 * Used to exit the program if there's an error during a parse method
+	 * 
+	 * @author Mechafinch
+	 */
+	@SuppressWarnings("serial")
+	private static class ParseException extends RuntimeException {
+		public ParseException(String msg, String coords, int line, Object ... others) {
+			// Two calls to String.format because we can't do anything before the super() line
+			super(String.format("Error at %s, line %d: ", coords, line) + String.format(msg, others));
+		}
 	}
 }
