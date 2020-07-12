@@ -106,7 +106,8 @@ public class TIS11Assembler {
 		ArrayList<ArrayList<String>> binaries = new ArrayList<>();
 		
 		// Some common binary strings
-		String immZero = "000000000000";
+		String zeroSource = "000000000000",
+			   zeroDest = "00000";
 		
 		// Assemble into binary
 		for(ArrayList<String> node : nodes) {
@@ -164,7 +165,7 @@ public class TIS11Assembler {
 				// Determine opcode, convert to binary in each
 				try { // Catch errors from parsing methods
 					if(instruction[0].equals("NOP")) {				// NOP
-						bin.add("0000" + immZero + immZero);
+						bin.add("0000" + zeroSource + zeroDest);
 					} else if(instruction[0].equals("MOV")) {		// MOV
 						// Verify we have source and destination
 						if(instruction.length != 3) {
@@ -175,9 +176,9 @@ public class TIS11Assembler {
 						
 						bin.add("0001" + parseSource(instruction[1], nodeCoords, i - 1) + parseDestination(instruction[2], nodeCoords, i - 1));
 					} else if(instruction[0].equals("SWP")) {		// SWP
-						bin.add("0010" + immZero + immZero);
+						bin.add("0010" + zeroSource + zeroDest);
 					} else if(instruction[0].equals("SAV")) {		// SAV
-						bin.add("0011" + immZero + immZero);
+						bin.add("0011" + zeroSource + zeroDest);
 					} else if(instruction[0].equals("ADD")) {		// ADD
 						// Verify arguments
 						if(instruction.length != 2) {
@@ -186,7 +187,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("0100" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+						bin.add("0100" + parseSource(instruction[1], nodeCoords, i - 1) + zeroDest);
 					} else if(instruction[0].equals("SUB")) {		// SUB
 						// Verify args
 						if(instruction.length != 2) {
@@ -195,9 +196,9 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("0101" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+						bin.add("0101" + parseSource(instruction[1], nodeCoords, i - 1) + zeroDest);
 					} else if(instruction[0].equals("NEG")) {		// NEG
-						bin.add("0110" + immZero + immZero);
+						bin.add("0110" + zeroSource + zeroDest);
 					} else if(instruction[0].equals("JMP")) {		// JMP
 						// Verify args
 						if(instruction.length != 2) {
@@ -206,7 +207,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1000" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+						bin.add("1000" + zeroSource + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
 					} else if(instruction[0].equals("JEZ")) {		// JEZ
 						// Verify args
 						if(instruction.length != 2) {
@@ -215,7 +216,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1001" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+						bin.add("1001" + zeroSource + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
 					} else if(instruction[0].equals("JNZ")) {		// JNZ
 						// Verify args
 						if(instruction.length != 2) {
@@ -224,7 +225,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1010" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+						bin.add("1010" + zeroSource + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
 					} else if(instruction[0].equals("JGZ")) {		// JGZ
 						// Verify args
 						if(instruction.length != 2) {
@@ -233,7 +234,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1011" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+						bin.add("1011" + zeroSource + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
 					} else if(instruction[0].equals("JLZ")) {		// JLZ
 						// Verify args
 						if(instruction.length != 2) {
@@ -242,7 +243,7 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1100" + immZero + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
+						bin.add("1100" + zeroSource + parseLabel(instruction[1], labelMap, nodeCoords, i - 1));
 					} else if(instruction[0].equals("JRO")) {		// JRO
 						// Verify args
 						if(instruction.length != 2) {
@@ -251,9 +252,9 @@ public class TIS11Assembler {
 							return;
 						}
 						
-						bin.add("1101" + parseSource(instruction[1], nodeCoords, i - 1) + immZero);
+						bin.add("1101" + parseSource(instruction[1], nodeCoords, i - 1) + zeroDest);
 					} else if(instruction[0].equals("HCF")) {		// HCF
-						bin.add("1111" + immZero + immZero);
+						bin.add("1111" + zeroSource + zeroDest);
 					} else { // Invalid opcode
 						printError("Invalid opcode '%s'", nodeCoords, i - 1, instruction);
 						return;
@@ -316,7 +317,7 @@ public class TIS11Assembler {
 		}
 		
 		String binString = Integer.toBinaryString(lblMap.get(lbl));		
-		return "0" + String.format("%11s", binString).replace(' ', '0');
+		return "0" + String.format("%4s", binString).replace(' ', '0');
 	}
 	
 	/**
@@ -331,28 +332,28 @@ public class TIS11Assembler {
 	private static String parseDestination(String dst, String coords, int line) throws ParseException {
 		switch(dst) { // Registers and ports
 			case "NIL":
-				return "100000000000";
+				return "10000";
 			
 			case "ACC":
-				return "100000000001";
+				return "10001";
 			
 			case "LEFT":
-				return "110000000000";
+				return "11000";
 			
 			case "RIGHT":
-				return "110000000001";
+				return "11001";
 				
 			case "UP":
-				return "110000000010";
+				return "11010";
 				
 			case "DOWN":
-				return "110000000011";
+				return "11011";
 				
 			case "ANY":
-				return "110000000100";
+				return "11100";
 				
 			case "LAST":
-				return "110000000101";
+				return "11101";
 		}
 		
 		// Cannot be anything else
